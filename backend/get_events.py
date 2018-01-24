@@ -2,18 +2,23 @@
 
 import json
 from datetime import datetime
-import facebook
-
+from get_posts import request_until_succeed
 
 API_KEYS = json.load(open('apiKeys.json'))
-graph = facebook.GraphAPI(access_token=API_KEYS['fb_access_token'])
 
-def get_official_events(facebook_id):
+
+def get_official_events(page_id):
     """Get official Facebook events posted on a Facebook page."""
-    try:
-        fields = 'fields=cover,description,end_time,start_time,place,name'
-        url = facebook_id + '/events?time_filter=upcoming&' + fields
-        fb_event = graph.request(url)['data']
-        return fb_event
-    except (KeyError, facebook.GraphAPIError):
-        return None
+    access_token = API_KEYS['fb_access_token']
+    base = 'https://graph.facebook.com/v2.9'
+    node = '/{}/events'.format(page_id)
+    parameters = '/?limit={}&access_token={}'.format(100, access_token)
+    fields = '&fields=cover,description,end_time,start_time,place,name'
+    time_filter = '&time_filter=upcoming'
+    url = base + node + parameters + fields  # + time_filter
+    events = json.loads(request_until_succeed(url))['data']
+    return events
+
+
+if __name__ == '__main__':
+    print(get_official_events('adamfzemke'))

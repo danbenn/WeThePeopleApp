@@ -10,7 +10,7 @@ import requests
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
-import facebook
+from utils import request_until_succeed
 
 CRED = credentials.Certificate('serviceKey.json')
 firebase_admin.initialize_app(CRED, {
@@ -18,7 +18,6 @@ firebase_admin.initialize_app(CRED, {
 })
 DB = db.reference()
 API_KEYS = json.load(open('apiKeys.json'))
-graph = facebook.GraphAPI(access_token=API_KEYS['fb_access_token'])
 
 
 def get_representatives(voter_address, uid):
@@ -114,9 +113,12 @@ def get_facebook_id(name, position):
 
 def get_politician_pages(query):
     """Get search results for politician pages."""
-    pages = graph.search(type='page',
-                         q=query,
-                         fields='name,category')['data']
+    base = 'https://graph.facebook.com/v2.9'
+    node = '/search?q=' + query
+    parameters = '&type=page&fields=name,category'
+    access_token = '&access_token={}'.format(API_KEYS['fb_access_token'])
+    url = base + node + parameters + access_token
+    pages = json.loads(request_until_succeed(url))['data']
     politician_pages = [page for page in pages
                         if page['category'] == 'Politician']
     return politician_pages

@@ -7,9 +7,12 @@
     "test": "jest"
   },
   "dependencies": {
+    "expo": "^24.0.2",
+    "prop-types": "^15.6.0",
     "react": "16.0.0",
     "react-native": "0.51.0",
-    "react-native-parallax-scroll-view": "^0.20.1"
+    "react-native-snap-carousel": "^3.4.0",
+    "react-navigation": "^1.0.0-beta.22"
   },
   "devDependencies": {
     "babel-eslint": "^8.1.2",

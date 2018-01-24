@@ -11,6 +11,7 @@ except ImportError:
     from urllib2 import urlopen, Request
 import nameparser
 from get_representatives import get_representatives
+from utils import request_until_succeed
 API_KEYS = json.load(open('apiKeys.json'))
 
 # Midnight of this current day: https://stackoverflow.com/a/19718517
@@ -37,6 +38,7 @@ def get_recent_posts(address, uid):
     end = time.time()
     print(end - start)
     return posts
+
 
 def scrape_facebook_page_status(rep):
     """
@@ -73,25 +75,6 @@ def scrape_facebook_page_status(rep):
         return None
 
 
-def request_until_succeed(url):
-    """Overcome Facebook API rate limitations by retrying queries."""
-    req = Request(url)
-    success = False
-    while success is False:
-        try:
-            response = urlopen(req)
-            if response.getcode() == 200:
-                success = True
-        except Exception as e:
-            print(e)
-            time.sleep(5)
-
-            print("Error for URL {}: {}".format(url, datetime.now()))
-            print("Retrying.")
-
-    return response.read()
-
-
 def unicode_decode(text):
     """Need to write tricky unicode correctly to csv."""
     try:
@@ -121,6 +104,7 @@ def process_facebook_status(status):
     so must check for existence first.
     """
     new_status = {}
+
     new_status['status_id'] = status['id']
     new_status['permalink_url'] = status['permalink_url']
     new_status['status_type'] = status['type']
@@ -130,8 +114,10 @@ def process_facebook_status(status):
         unicode_decode(status['name'])
     new_status['picture_url'] = '' if 'full_picture' not in status else \
         unicode_decode(status['full_picture'])
-    new_status['external_link'] = '' if 'facebook.com' in status['link'] else \
-        unicode_decode(status['link'])
+    pprint(status)
+    new_status['external_link'] = ''
+    if 'link' in status and 'facebook.com' not in status['link']:
+        new_status['external_link'] = unicode_decode(status['link'])
 
     # Time needs special care since a) it's in UTC and
     # b) it's not easy to use in statistical programs.
