@@ -4,103 +4,121 @@ import React, { Component } from 'react';
 import {
   Dimensions,
   Image,
-  ListView,
-  PixelRatio,
+  SectionList,
   StyleSheet,
   Text,
   View,
+  StatusBar,
+  TouchableHighlight,
 } from 'react-native';
-import ParallaxScrollView from 'react-native-parallax-scroll-view';
+import ParallaxScrollView from './ParallaxScrollView';
 import DateHeader from './DateHeader';
 
 const window = Dimensions.get('window');
+const WINDOW_HEIGHT = window.height;
 
-const AVATAR_SIZE = 120;
-const ROW_HEIGHT = 80;
+const sampleStories = require('./sampleStories.json');
+
+const ROW_HEIGHT = 70;
 const PARALLAX_HEADER_HEIGHT = 370;
 const STICKY_HEADER_HEIGHT = 70;
 
 export default class HomePage extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      dataSource: new ListView.DataSource({
-        rowHasChanged: (r1, r2) => r1 !== r2,
-      }).cloneWithRows([
-        'Simplicity Matters',
-        'Hammock Driven Development',
-        'Value of Values',
-        'Are We There Yet?',
-        'The Language of the System',
-        'Design, Composition, and Performance',
-        'Clojure core.async',
-        'The Functional Database',
-        'Deconstructing the Database',
-        'Hammock Driven Development',
-        'Value of Values',
-      ]),
-    };
+  static tabBarOptions = {
+    activeTintColor: 'red',
+    style: {
+      backgroundColor: 'green',
+    },
+  }
+
+  navigateToArticle = (rowID) => {
+    console.log(rowID);
+    const { navigate } = this.props.navigation;
+    navigate('ArticleSwiper', { firstItem: Number(rowID) });
+  }
+
+  renderItem = (item) => {
+    const fbId = item.page_id;
+    const imageUrl = `https://graph.facebook.com/${fbId}/picture?type=large`;
+    console.log(item);
+
+    return (
+      <TouchableHighlight
+        key={item.key}
+        style={styles.highlight}
+        underlayColor="rgba(0,0,0,.1)"
+        onPress={() => this.navigateToArticle(item.key)}
+      >
+        <View style={styles.row}>
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.profilePic}
+          />
+          <Text style={styles.rowText}>
+            { item.author }
+          </Text>
+        </View>
+      </TouchableHighlight>
+    );
+  }
+
+  renderSectionHeader = (section) => {
+    if (section.key === 0) {
+      return (
+        <View>
+          <DateHeader />
+          <View style={styles.colorBar}>
+            <Text style={styles.colorBarText}>
+              { section.title }
+            </Text>
+          </View>
+        </View>
+      );
+    }
+    return (
+      <View style={[styles.colorBar, { backgroundColor: 'orange' }]}>
+        <Text style={[styles.colorBarText]}>
+          { 'Events' }
+        </Text>
+      </View>
+    );
   }
 
   render() {
-    const { onScroll = () => {} } = this.props;
     return (
-      <ListView
-        ref="ListView"
-        style={styles.container}
-        dataSource={this.state.dataSource}
-        renderRow={(rowData, sectionID, rowID, higlightRow) => {
-          if (rowID == 0) {
-            return (
-              <DateHeader/>
-            );
-          }
-          if (rowID == 1) {
-            return (
-              <View style={styles.colorBar}>
-                <Text style={styles.colorBarText}>
-                  { 'Today\'s stories' }
-                </Text>
-              </View>
-            );
-          }
+      <View style={styles.container}>
+        <SectionList
+          style={styles.container}
+          renderItem={({ item }) => this.renderItem(item)}
+          automaticallyAdjustContentInsets={false}
+          renderSectionHeader={({ section }) => this.renderSectionHeader(section)}
+          sections={[ // homogeneous rendering between sections
+          { data: sampleStories.stories, title: 'Today\'s updates', key: 0 },
+          { data: sampleStories.events, title: 'Events', key: 1 },
 
-          return (
-            <View key={rowData} style={styles.row}>
-              <Text style={styles.rowText}>
-                { rowData }
-              </Text>
-            </View>
-          );
-        }}
-        renderScrollComponent={props => (
-          <ParallaxScrollView
-            onScroll={onScroll}
-            headerBackgroundColor="#000"
-            stickyHeaderHeight={STICKY_HEADER_HEIGHT}
-            parallaxHeaderHeight={PARALLAX_HEADER_HEIGHT}
-            backgroundSpeed={10}
-            renderBackground={() => (
-              <View key="background">
-                <Image source={{
-                  uri: 'https://i.ytimg.com/vi/P-NZei5ANaQ/maxresdefault.jpg',
+        ]}
+          keyExtractor={(item, index) => index}
+          renderScrollComponent={() => (
+            <ParallaxScrollView
+              onScroll={() => {}}
+              parallaxHeaderHeight={(WINDOW_HEIGHT / 2) - 45}
+              backgroundSpeed={10}
+              bounces={false}
+              renderBackground={() => (
+                <View key="background">
+                  <Image source={{
+                  uri: sampleStories.stories[0].picture_url,
                   width: window.width,
-                  height: PARALLAX_HEADER_HEIGHT,
+                  height: (WINDOW_HEIGHT / 2) - 45,
                 }}
-                />
-                <View style={{
-                  position: 'absolute',
-                    top: 0,
-                    width: window.width,
-                    backgroundColor: 'rgba(0,0,0,0)',
-                    height: PARALLAX_HEADER_HEIGHT,
-                  }}
-                />
-              </View>
+                  />
+                </View>
             )}
-          />
+            />
         )}
-      />
+        />
+      </View>
+
     );
   }
 }
@@ -109,62 +127,17 @@ export default class HomePage extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black',
-  },
-  background: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: window.width,
-    height: PARALLAX_HEADER_HEIGHT,
-  },
-  stickySection: {
-    height: STICKY_HEADER_HEIGHT,
-    width: 300,
-    justifyContent: 'flex-end',
-  },
-  stickySectionText: {
-    color: 'white',
-    fontSize: 20,
-    margin: 10,
-  },
-  fixedSection: {
-    position: 'absolute',
-    bottom: 10,
-    right: 10,
-  },
-  fixedSectionText: {
-    color: '#999',
-    fontSize: 20,
-  },
-  parallaxHeader: {
-    alignItems: 'center',
-    flex: 1,
-    flexDirection: 'column',
-    paddingTop: 100,
-  },
-  avatar: {
-    marginBottom: 10,
-    borderRadius: AVATAR_SIZE / 2,
-  },
-  sectionSpeakerText: {
-    color: 'white',
-    fontSize: 24,
-    paddingVertical: 5,
-  },
-  sectionTitleText: {
-    color: 'white',
-    fontSize: 18,
-    paddingVertical: 5,
+    backgroundColor: 'white',
   },
   row: {
-    overflow: 'hidden',
-    paddingHorizontal: 10,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     height: ROW_HEIGHT,
     backgroundColor: 'transparent',
     borderColor: '#ccc',
     borderBottomWidth: 1,
-    justifyContent: 'center',
   },
   colorBar: {
     flex: 1,
@@ -180,6 +153,17 @@ const styles = StyleSheet.create({
     fontFamily: 'avenir',
   },
   rowText: {
+    flex: 1,
     fontSize: 20,
+    marginLeft: 10,
+  },
+  profilePic: {
+    height: ROW_HEIGHT,
+    width: ROW_HEIGHT,
+    marginLeft: 0,
   },
 });
+
+/*
+
+*/

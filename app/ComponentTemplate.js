@@ -6,9 +6,9 @@ import {
 } from 'react-native';
 
 export default class SomeComponent extends Component {
-    render() {
-      return (
-        <View/>
-      );
-    }
+  render() {
+    return (
+      <View />
+    );
+  }
 }
