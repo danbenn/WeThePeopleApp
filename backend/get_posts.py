@@ -21,10 +21,10 @@ SINCE_DATE = str(BEGINNING_OF_TODAY - timedelta(days=1))[0:10]
 UNTIL_DATE = str(BEGINNING_OF_TODAY - timedelta(days=0))[0:10]
 
 
-def get_recent_posts(address, uid):
+def get_recent_posts(address):
     """Get most liked recent post (past 24 hrs) from each representative."""
     start = time.time()
-    reps = get_representatives(address, uid)
+    reps = get_representatives(address)
     reps_with_facebook = [rep for rep in reps if 'facebook_id' in rep
                           and rep['facebook_id']]
     # Remove duplicate Facebook IDs
@@ -36,7 +36,7 @@ def get_recent_posts(address, uid):
     posts = [post for post in posts if post]
     posts.sort(key=lambda x: x['reactions'], reverse=True)
     end = time.time()
-    print(end - start)
+    # print(end - start)
     return posts
 
 
@@ -53,13 +53,15 @@ def scrape_facebook_page_status(rep):
     base = 'https://graph.facebook.com/v2.9'
     node = '/{}/posts'.format(page_id)
     parameters = '/?limit={}&access_token={}'.format(100, access_token)
-    since = '&since={}'.format(SINCE_DATE) if SINCE_DATE \
+    # Get unix timestamps
+    since_unix = get_unix_timestamp(SINCE_DATE)
+    until_unix = get_unix_timestamp(UNTIL_DATE)
+    since = '&since={}'.format(since_unix) if since_unix \
         is not '' else ''
-    until = '&until={}'.format(UNTIL_DATE) if UNTIL_DATE \
+    until = '&until={}'.format(until_unix) if until_unix \
         is not '' else ''
 
     base_url = base + node + parameters + since + until
-
     url = get_facebook_page_feed_url(base_url)
     statuses = json.loads(request_until_succeed(url))
 
@@ -68,11 +70,36 @@ def scrape_facebook_page_status(rep):
     # Find status with the most reactions
     statuses.sort(key=lambda x: x['reactions'], reverse=True)
     if statuses:
-        statuses[0]['author'] = first_and_last
-        statuses[0]['page_id'] = page_id
-        return statuses[0]
+        top_status = statuses[0]
+        top_status['author'] = first_and_last
+        top_status['page_id'] = page_id
+        top_status['title'] = rep['position']
+        top_status['party'] = rep['party']
+        top_status['type'] = 'post'
+        if top_status['picture_url'] == '':
+            # Use page's cover photo for posts with no picture
+            url = base + \
+                '/{}?fields=cover&access_token={}'.format(page_id, access_token)
+
+            # try:
+            response = json.loads(request_until_succeed(url))
+            cover_url = response['cover']['source']
+            top_status['picture_url'] = cover_url
+            '''
+            except KeyError:
+                print('Error: unable to recover cover photo for: ' + page_id)
+                print(response)
+                top_status['picture_url'] = 'https://www.cdc.gov/quarantine/stations/images/washington-dc_600px.jpg'
+                raise
+            '''
+        return top_status
     else:
         return None
+
+
+def get_unix_timestamp(date_str):
+    """Convert YYYY-MM-DD to unix timestamp."""
+    return time.mktime(datetime.strptime(date_str, "%Y-%m-%d").timetuple())
 
 
 def unicode_decode(text):
@@ -112,9 +139,9 @@ def process_facebook_status(status):
         unicode_decode(status['message'])
     new_status['link_name'] = '' if 'name' not in status else \
         unicode_decode(status['name'])
+
     new_status['picture_url'] = '' if 'full_picture' not in status else \
         unicode_decode(status['full_picture'])
-    pprint(status)
     new_status['external_link'] = ''
     if 'link' in status and 'facebook.com' not in status['link']:
         new_status['external_link'] = unicode_decode(status['link'])
@@ -137,6 +164,8 @@ def process_facebook_status(status):
 
 
 if __name__ == '__main__':
-    posts = get_recent_posts('6578 brookhills ct se', 'blah')
-    with open('sampleStories.json', 'w') as outfile:
-        json.dump(posts, outfile, indent=4)
+    posts = get_recent_posts('1341 geddes ave')
+    dates = [post['published_date'] for post in posts if 'published_date' in post]
+    # pprint(posts)
+    # with open('samplePosts.json', 'w') as outfile:
+    #     json.dump(posts, outfile, indent=4)

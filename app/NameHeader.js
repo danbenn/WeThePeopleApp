@@ -13,6 +13,12 @@ import ProfilePic from './ProfilePic';
 const PAGE_WIDTH = Dimensions.get('window').width;
 
 export default class NameHeader extends Component {
+  renderParty = () => {
+    if (this.props.party === '' || this.props.party === 'Unknown') {
+      return '';
+    }
+    return ` (${this.props.party})`;
+  }
   render() {
     const fbId = this.props.facebookId;
     const imageUrl = `https://graph.facebook.com/${fbId}/picture?type=large`;
@@ -34,7 +40,7 @@ export default class NameHeader extends Component {
                   {this.props.name}
                 </Text>
                 <Text style={styles.party}>
-                  {` (${this.props.party})`}
+                  {this.renderParty()}
                 </Text>
               </Text>
             </TouchableHighlight>
@@ -67,8 +73,8 @@ let styles = StyleSheet.create({
   title: {
     marginTop: 8,
     marginLeft: 10,
-    fontSize: 14,
-    color: 'grey',
+    fontSize: 15,
+    color: 'white',
   },
   nameView: {
     flexDirection: 'column',

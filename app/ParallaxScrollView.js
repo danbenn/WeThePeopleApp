@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Animated, Dimensions, ScrollView, StyleSheet, View, ViewPropTypes } from 'react-native';
+import { Animated, Dimensions, ScrollView, StyleSheet, View, ViewPropTypes, TouchableHighlight } from 'react-native';
 
 import { bool, func, number, string } from 'prop-types';
 
@@ -115,10 +115,11 @@ class ParallaxScrollView extends Component {
 	  });
 	  const scrollElement = renderScrollComponent(scrollViewProps);
 	  return (
+
   <View
     style={[style, styles.container]}
-    onLayout={e => this._maybeUpdateViewDimensions(e)}
   >
+
     {background}
     {React.cloneElement(
 					scrollElement,
@@ -139,6 +140,7 @@ class ParallaxScrollView extends Component {
 				)}
     {maybeStickyHeader}
   </View>
+
 	  );
 	}
 
@@ -387,7 +389,7 @@ class ParallaxScrollView extends Component {
   >
     {renderStickyHeader()}
   </Animated.View>
-        </Animated.View>
+</Animated.View>
 						: null}
     {renderFixedHeader && renderFixedHeader()}
   </View>

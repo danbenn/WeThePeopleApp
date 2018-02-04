@@ -18,8 +18,14 @@ service: backend
 # frameworkVersion: "=X.X.X"
 
 provider:
-  name: aws
-  runtime: python3.6
+    name: aws
+    runtime: python3.6
+
+plugins:
+  - serverless-python-requirements
+custom:
+  pythonRequirements:
+    dockerizePip: non-linux
 
 # you can overwrite defaults here
 #  stage: dev
@@ -46,7 +52,7 @@ provider:
 #    variable1: value1
 
 # you can add packaging information here
-#package:
+# package:
 #  include:
 #    - include-me.py
 #    - include-me-dir/**
@@ -55,12 +61,18 @@ provider:
 #    - exclude-me-dir/**
 
 functions:
-  find_townhalls:
-    handler: handler.find_townhalls
-    events:
-      - http:
-          path: find_townhalls/{address}
-          method: get
+    find_townhalls:
+        handler: handler.find_upcoming_events
+        events:
+            - http:
+                path: find_upcoming_events/{address}
+                method: get
+    find_recent_posts:
+        handler: handler.find_recent_posts
+        events:
+            - http:
+                path: find_recent_posts/{address}
+                method: get
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
@@ -96,7 +108,7 @@ functions:
 #      variable2: value2
 
 # you can add CloudFormation resource templates here
-#resources:
+# resources:
 #  Resources:
 #    NewResource:
 #      Type: AWS::S3::Bucket

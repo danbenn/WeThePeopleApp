@@ -2,7 +2,6 @@
 
 from multiprocessing.dummy import Pool as ThreadPool
 import json
-import time
 import re
 from pprint import pprint
 import nameparser
@@ -14,16 +13,16 @@ from utils import request_until_succeed
 
 CRED = credentials.Certificate('serviceKey.json')
 firebase_admin.initialize_app(CRED, {
-    'databaseURL' : 'https://wethepeople-cb4d1.firebaseio.com'
+    'databaseURL': 'https://wethepeople-cb4d1.firebaseio.com'
 })
 DB = db.reference()
 API_KEYS = json.load(open('apiKeys.json'))
 
 
-def get_representatives(voter_address, uid):
+def get_representatives(voter_address):
     """Get representatives for given address."""
     # Check cache before requesting representatives
-    user_node = DB.child('users/{0}'.format(uid)).get()
+    user_node = DB.child('users/{0}'.format(voter_address)).get()
     if user_node and 'reps' in user_node:
         return user_node['reps']
     response = get_civic_api_response(voter_address)
@@ -32,11 +31,13 @@ def get_representatives(voter_address, uid):
     reps = response['officials']
     offices = response['offices']
     reps = match_reps_with_offices(reps, offices)
+    for rep in reps:
+        rep['name'] = get_first_and_last_name(rep['name'])
     pool = ThreadPool(4)
     reps = pool.map(match_rep_with_facebook_id, reps)
     # Cache representatives for future use
-    user_node = DB.child('users/{0}'.format(uid)).set({
-        'reps': reps
+    user_node = DB.child('users/{0}'.format(voter_address)).set({
+        'reps': reps,
     })
     return reps
 
@@ -55,7 +56,8 @@ def match_reps_with_offices(reps, offices):
     """Find official title for each rep; e.g., 'Senator'."""
     for office in offices:
         for index in office['officialIndices']:
-            reps[index]['position'] = office['name']
+            position = get_rep_title_for_display(office['name'])
+            reps[index]['position'] = position
     return reps
 
 
@@ -99,7 +101,7 @@ def get_facebook_id(name, position):
     rep_node = DB.child('reps/{0}'.format(sanitized_name)).get()
     if rep_node and 'facebook_id' in rep_node:
         return rep_node['facebook_id']
-    shortened_position = get_short_rep_title(position)
+    shortened_position = get_rep_title_for_search(position)
     # Try searching using their name AND title
     name_and_title = shortened_position + ' ' + first_and_last
     pages = get_politician_pages(name_and_title)
@@ -114,7 +116,7 @@ def get_facebook_id(name, position):
 def get_politician_pages(query):
     """Get search results for politician pages."""
     base = 'https://graph.facebook.com/v2.9'
-    node = '/search?q=' + query
+    node = '/search?q=' + query.replace(' ', '%20')
     parameters = '&type=page&fields=name,category'
     access_token = '&access_token={}'.format(API_KEYS['fb_access_token'])
     url = base + node + parameters + access_token
@@ -124,10 +126,31 @@ def get_politician_pages(query):
     return politician_pages
 
 
-def get_short_rep_title(title):
-    """Shorten the position name of a representative."""
-    title = title.split(' of ')[0].split('/')[0].replace('United States ', '')
+def get_first_and_last_name(name):
+    """Remove middle name and titles."""
+    parsed_name = nameparser.HumanName(name)
+    return parsed_name.first + ' ' + parsed_name.last
+
+
+def get_rep_title_for_search(title):
+    """
+    Shorten the position name of a representative, specifically for looking up
+    their page using Graph search.
+    """
+    title = title.split(' of ')[0]
     return title
 
+
+def get_rep_title_for_display(title):
+    """
+    Adjust the title of rep for display purposes.
+
+    It's usually made shorter.
+    """
+    return title.replace(' of the United States', '')\
+        .replace('Senate', 'Senator').replace('United States', 'U.S.')\
+        .replace('Representatives', 'Reps')
+
+
 if __name__ == '__main__':
-    pprint(get_representatives('6578 brookhills ct', 'blah'))
+    pprint(get_representatives('6578 riverdale dr'))

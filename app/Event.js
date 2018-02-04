@@ -8,9 +8,10 @@ import {
   Image,
   TouchableHighlight,
 } from 'react-native';
+import moment from 'moment';
+import Lightbox from './Lightbox';
 
 const window = Dimensions.get('window');
-const sampleStories = require('./sampleStories.json');
 const clock = require('../assets/clock.png');
 const locationPin = require('../assets/locationPin.png');
 
@@ -18,13 +19,15 @@ export default class Event extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      start: moment(this.props.event.start_time),
+      end: moment(this.props.event.end_time),
       height: null,
       width: null,
     };
   }
   componentDidMount() {
     Image.getSize(
-      sampleStories.events[0].cover.source,
+      this.props.event.cover.source,
       (srcWidth, srcHeight) => {
         const maxHeight = Dimensions.get('window').height / 2;
         const scaleUpFactor = window.width / srcWidth;
@@ -36,59 +39,66 @@ export default class Event extends Component {
     );
   }
 
-  renderEventHeader = item => (
+  renderEventHeader = event => (
     <View style={styles.eventHeader}>
       <View style={styles.dateHeader}>
         <Text style={styles.dayOfMonth}>
-        05
+          {this.state.start.format('DD')}
         </Text>
         <Text style={styles.monthInHeader}>
-        JAN
+          {this.state.start.format('MMM').toUpperCase()}
         </Text>
       </View>
       <Text
         style={styles.name}
         numberOfLines={2}
       >
-        {item.name}
+        {event.name}
       </Text>
     </View>
   )
 
-  renderEventImage = item => (
-    <Image
-      source={{
-      uri: item.cover.source,
-      width: window.width,
-      height: this.state.height,
-    }}
-      style={styles.image}
-    />
+  renderEventImage = event => (
+    <Lightbox underlayColor="white">
+      <Image
+        source={{
+          uri: event.cover.source,
+          width: window.width,
+          height: this.state.height,
+        }}
+        style={styles.image}
+      />
+    </Lightbox>
   )
 
-  renderTimeDetail = item => (
+  renderTimeDetail = event => (
     <View style={styles.infoRow}>
       <Image
         style={styles.icon}
         source={clock}
       />
       <Text style={styles.infoRowText}>
-        Thursday, January 5 at 5:30 - 8 pm
+        {this.state.start.format('dddd, MMMM D, h a')}
       </Text>
     </View>
   )
 
-  renderLocation = item => (
-    <View style={styles.infoRow}>
-      <Image
-        style={styles.icon}
-        source={locationPin}
-      />
-      <Text style={styles.infoRowText}>
-        {item.place.name}
-      </Text>
-    </View>
-  )
+  renderLocation = (event) => {
+    if ('place' in event) {
+      return (
+        <View style={styles.infoRow}>
+          <Image
+            style={styles.icon}
+            source={locationPin}
+          />
+          <Text style={styles.infoRowText}>
+            {event.place.name}
+          </Text>
+        </View>
+      );
+    }
+    return null;
+  }
 
   renderButton = text => (
     <TouchableHighlight
@@ -114,13 +124,13 @@ export default class Event extends Component {
   )
 
   render() {
-    const { item } = this.props;
+    const { event } = this.props;
     return (
       <View style={styles.eventContainer}>
-        {this.renderEventImage(item)}
-        {this.renderEventHeader(item)}
-        {this.renderTimeDetail(item)}
-        {this.renderLocation(item)}
+        {this.renderEventImage(event)}
+        {this.renderEventHeader(event)}
+        {this.renderTimeDetail(event)}
+        {this.renderLocation(event)}
         {this.renderButtons()}
       </View>
     );
@@ -148,6 +158,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
     width: window.width,
+    marginBottom: 10,
   },
   eventHeader: {
     flex: 1,
@@ -160,7 +171,7 @@ const styles = StyleSheet.create({
   dateHeader: {
     width: 70,
     flexDirection: 'column',
-    marginLeft: 13,
+    marginLeft: 11,
     // backgroundColor: 'red',
   },
   dayOfMonth: {
@@ -180,7 +191,6 @@ const styles = StyleSheet.create({
   image: {
     flex: 1,
     backgroundColor: 'black',
-    // backgroundColor: 'blue',
     resizeMode: 'contain',
   },
   icon: {
